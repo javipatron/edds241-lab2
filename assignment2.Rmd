@@ -1,0 +1,88 @@
+---
+title: 'EDS 241: Assignment 1'
+author: 'Javier Patrón'
+date: "`r Sys.Date()`"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+Question 1:
+
+Application of estimators based on the "treatment ignorability"
+assumption The goal is to estimate the causal effect of maternal smoking
+during pregnancy on infant birth weight using the treatment ignorability
+assumptions (Lecture 6 & 7).
+
+The data are taken from the National Natality Detail Files, and the
+extract "SMOKING_EDS241.csv"' is a random sample of all births in
+Pennsylvania during 1989-1991. Each observation is a mother-infant pair.
+The key variables are:
+
+The outcome and treatment variables are:
+
+-   birthwgt = birth weight of infant in grams
+
+-   tobacco = indicator for maternal smoking
+
+The control variables are: mage (mother's age), meduc (mother's
+education), mblack (=1 if mother black), alcohol (=1 if consumed alcohol
+during pregnancy), first (=1 if first child), diabete (=1 if mother
+diabetic), anemia (=1 if mother anemic)
+
+Load in the libraries
+
+```{r}
+library(tidyverse)
+
+```
+
+Load in the data
+
+```{r}
+smoke <- read_csv(here::here("SMOKING_EDS241.csv"))
+
+```
+
+(a) What is the unadjusted mean difference in birth weight of infants
+with smoking and nonsmoking mothers? Under what assumption does this
+correspond to the average treatment effect of maternal smoking during
+pregnancy on infant birth weight? Provide some simple empirical evidence
+for or against this assumption.
+
+```{r}
+#Question (a)
+
+
+
+```
+
+(b) Assume that maternal smoking is randomly assigned conditional on the
+observable covariates listed above. Estimate the effect of maternal
+smoking on birth weight using an OLS regression with linear controls for
+the covariates. Report the estimated coefficient on tobacco and its
+standard error.
+
+```{r}
+# Question (b)
+
+
+```
+
+(c) Use the exact matching estimator to estimate the effect of maternal
+smoking on birth weight. For simplicity, consider the following
+covariates in your matching estimator: create a 0-1 indicator for
+mother's age (=1 if mage\>=34), and a 0-1 indicator for mother's
+education (1 if meduc\>=16), mother's race (mblack), and alcohol
+consumption indicator (alcohol). These 4 covariates will create 2 \* 2
+*\** 2 \* 2 = 16 cells.
+
+```{r}
+# Question (c)
+
+
+```
+
+Report the estimated average treatment effect of smoking on birthweight
+using the exact matching estimator and its linear regression analogue.
