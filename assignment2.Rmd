@@ -2,16 +2,15 @@
 title: 'EDS 241: Assignment 1'
 author: 'Javier Patrón'
 date: "`r Sys.Date()`"
-output: html_document
-editor_options: 
-  markdown: 
-    wrap: 72
+output:
+  pdf_document:
+    toc: false
 ---
 
-Question 1:
+## Question 1:
 
 Application of estimators based on the "treatment ignorability"
-assumption The goal is to estimate the causal effect of maternal smoking
+assumption. The goal is to estimate the causal effect of maternal smoking
 during pregnancy on infant birth weight using the treatment ignorability
 assumptions (Lecture 6 & 7).
 
@@ -35,6 +34,10 @@ Load in the libraries
 
 ```{r}
 library(tidyverse)
+library(stargazer)
+library(estimatr)
+library(corrplot)
+library(tidymodels)
 
 ```
 
@@ -42,47 +45,121 @@ Load in the data
 
 ```{r}
 smoke <- read_csv(here::here("SMOKING_EDS241.csv"))
-
 ```
 
-(a) What is the unadjusted mean difference in birth weight of infants
-with smoking and nonsmoking mothers? Under what assumption does this
-correspond to the average treatment effect of maternal smoking during
-pregnancy on infant birth weight? Provide some simple empirical evidence
-for or against this assumption.
+## Question (a) 
+#### What is the unadjusted mean difference in birth weight of infants
+    with smoking and nonsmoking mothers? Under what assumption does this
+    correspond to the average treatment effect of maternal smoking
+    during pregnancy on infant birth weight? Provide some simple
+    empirical evidence for or against this assumption.
 
 ```{r}
 #Question (a)
 
+#What is the mean difference between smoking and non smoking
+weight_means <- smoke |> 
+  group_by(tobacco) |> 
+  summarise(birthwgt_mean = mean(birthwgt))
 
+
+smoke |> 
+  mutate(tobacco = case_when(tobacco == 0 ~ "Non Smoker",
+                             tobacco == 1 ~ "Smoker")) |> 
+  ggplot(aes(x= as.factor(tobacco), y = birthwgt, fill = tobacco)) +
+  geom_boxplot(alpha = 0.7) + 
+  labs(x = "Tobacco",
+       y = "Birth Weight (grams)",
+       title = "Difference between smoking and non-smoking mothers in Birth weight ")
+```
+
+The difference in birth weight means from smoking and non smoking is: `r round(weight_means$birthwgt_mean[1] - weight_means$birthwgt_mean[2],2 )`(grams). Meaning that the weight on average for the babies that had a mother who was a smoker is 244.54 lighter.
+
+Another way of seeing this is by the lm() function
+```{r}
+lm(data = smoke, birthwgt ~ tobacco)
+```
+
+Thanks to the results above with lm() we can see the same result as above. The "slope" tell us that the difference between weight babies between smokers and nonsmokers is -244.5 grams. For every "unit" which is YES or NO, a baby on average will be 244.5 grams lighter **omitting all of the other variables**.
+
+This assumption is under the fact that the 244.5 grams is the decrease on weight baby in case the mother smokes on pregnancy. But is is **not the correct assumption**. There are other factors that can have a significant effect on the birth weight, as you can see in this correlation matrix
+
+```{r, echo = FALSE}
+
+# Obtain correlation matrix
+matrix <- cor(smoke)
+
+# Make a correlation plot between the variables
+corrplot(matrix, 
+         method = "color", 
+         shade.col = NA, 
+         tl.col = "gray40", 
+         tl.srt = 45, 
+         addCoef.col = "gray20", 
+         cl.pos = "n", 
+         order = "hclust",
+         col = colorRampPalette(c("green", "white", "lightblue"))(100))
 
 ```
 
-(b) Assume that maternal smoking is randomly assigned conditional on the
-observable covariates listed above. Estimate the effect of maternal
-smoking on birth weight using an OLS regression with linear controls for
-the covariates. Report the estimated coefficient on tobacco and its
-standard error.
+
+## Question (b) 
+#### Assume that maternal smoking is randomly assigned conditional on the observable covariates listed above. Estimate the effect of maternal smoking on birth weight using an OLS regression with linear controls for the covariates. Report the estimated coefficient on tobacco and its standard error.
 
 ```{r}
 # Question (b)
+# Fit the linear regression model with all the variables
+all <- lm(data = smoke, birthwgt ~ .)
 
+# Create a pretty table of the results
+x <- starprep(all, 
+             stat = c("std.error"), 
+             se_type = "HC1", 
+             alpha = 0.05)
+
+stargazer(all, 
+           se = x, 
+           type="text")
 
 ```
 
+As you can see in the table above the tobacco impact in birth weight has moved from 244.5 to 228.073. This means that tobacco is not the only variable that is affecting a possible decrease in weight for new borns. There are other factors and variables affecting the weight birth of infants.
+
+Additionally thanks to the stargazer function we can see the stroitazity error for tobacco is with 4.277. Meaning that the 228.073 that tobacco effects on birth weight has a standard error of 4.277 grams on average. 
+
+
 (c) Use the exact matching estimator to estimate the effect of maternal
-smoking on birth weight. For simplicity, consider the following
-covariates in your matching estimator: create a 0-1 indicator for
-mother's age (=1 if mage\>=34), and a 0-1 indicator for mother's
-education (1 if meduc\>=16), mother's race (mblack), and alcohol
-consumption indicator (alcohol). These 4 covariates will create 2 \* 2
-*\** 2 \* 2 = 16 cells.
+    smoking on birth weight. For simplicity, consider the following
+    covariates in your matching estimator: create a 0-1 indicator for
+    mother's age (= 1 if mage\> = 34), and a 0-1 indicator for mother's
+    education (1 if meduc\> = 16), mother's race (mblack), and alcohol
+    consumption indicator (alcohol). These 4 covariates will create 2 \*
+    2 *\** 2 \* 2 = 16 cells.
 
 ```{r}
 # Question (c)
+#Create the new column with the code
+smoke_new <- smoke |> 
+  mutate(mage = case_when(mage > 34 ~ 1,
+                          TRUE ~ 0)) |> 
+  mutate(meduc = case_when(meduc > 16 ~ 1,
+                           TRUE ~0)) |> 
+  mutate(code = as.factor(paste0(mage, meduc, mblack,alcohol)))
+
+class(smoke_new$code)
+
+
+# MULTIVARIATE MATCHING AS REGRESSION ESTIMATOR
+reg_ate <- lm(data = smoke_new, birthwgt ~ tobacco + code)
+
+se_models = starprep(reg_ate, stat = c("std.error"), se_type = "HC2", alpha = 0.05)
+stargazer(reg_ate, se = se_models, type="text")
 
 
 ```
 
 Report the estimated average treatment effect of smoking on birthweight
 using the exact matching estimator and its linear regression analogue.
+
+
+
